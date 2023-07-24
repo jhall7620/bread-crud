@@ -1,25 +1,31 @@
 const router = require('express').Router()
-const bread = require('../models/bread')
 const Bread = require('../models/bread')
+const Baker = require('../models/baker')
 
-router.get('/', (req, res) =>{
-    res.render('index', {breads: Bread})
+// GET all bread
+router.get('/', async (req, res) =>{
+    const breads = await Bread.find()
+    const bakers = await Baker.find()
+    res.render('index', {breads, bakers})
 })
 
-router.get('/new', (req, res) => {
-    res.render('new')
+// GET render new page
+router.get('/new', async (req, res) => {
+    const bakers = await Baker.find()
+    res.render('new', {bakers})
 })
 
-router.get('/:index', (req, res) => {
-    const {index} = req.params
+//GET bread by id
+router.get('/:id', async (req, res) => {
+    const {id} = req.params
+    const bread = await Bread.findById(id).populate('baker')
     res.render('show', {
-        bread: Bread[index],
-        index
+        bread
     })
     // res.send(Bread[index])
 })
 
-//GET bread by index
+//GET bread by name
 router.get('/name/:name', (req, res) => {
     const {name} = req.params
     const bread = Bread.find(b => b.name === name)
@@ -27,16 +33,18 @@ router.get('/name/:name', (req, res) => {
 })
 
 //GET edit page
-router.get('/:index/edit', (req, res) => {
-    const {index} = req.params
+router.get('/:id/edit', async (req, res) => {
+    const {id} = req.params
+    const bread = await Bread.findById(id)
+    const bakers = await Baker.find()
     res.render('edit', {
-        bread: Bread[index],
-        index
+        bread,
+        bakers
     })
 })
 
 //POST create a new bread
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
     if(req.body.hasGluten === 'on'){
         req.body.hasGluten = true
     } else{
@@ -44,22 +52,16 @@ router.post('/', (req, res) => {
     }
 
     if(!req.body.image){
-        req.body.image = 'https://images.unsplash.com/photo-1534620808146-d33bb39128b2?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80'
+        req.body.image = undefined
     }
 
-    Bread.push(req.body)
+    await Bread.create(req.body)
     res.redirect('/breads')
 })
 
-router.delete('/:index', (req, res) => {
-    const {index} = req.params
-    Bread.splice(index, 1)
-    res.status(303).redirect('/breads')
-})
-
 // PUT update a bread by index
-router.put('/:index', (req, res) => {
-    const {index} = req.params
+router.put('/:id', async (req, res) => {
+    const {id} = req.params
     if(req.body.hasGluten === 'on'){
         req.body.hasGluten = true
     } else{
@@ -70,13 +72,15 @@ router.put('/:index', (req, res) => {
         req.body.image = 'https://images.unsplash.com/photo-1534620808146-d33bb39128b2?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1&auto=format&fit=crop&w=634&q=80'
     }
 
-    Bread[index] = req.body
-    res.status(303).redirect('/breads')
+    await Bread.findByIdAndUpdate(id, req.body)
+    res.status(303).redirect(`/breads/${id}`)
 })
 
-router.delete('/:index', (req, res) => {
-    const {index} = req.params
-    Bread.splice(index, 1)
+
+// DELETE bread by id
+router.delete('/:id', async (req, res) => {
+    const {id} = req.params
+    await Bread.findByIdAndDelete(id)
     res.status(303).redirect('/breads')
 })
 
